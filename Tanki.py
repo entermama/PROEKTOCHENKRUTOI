@@ -2,22 +2,29 @@ import pygame
 import sys
 
 pygame.init()
+pygame.display.init()
 
-screen = pygame.display.set_mode((800, 600))
+# Получаем разрешение экрана
+info = pygame.display.Info()
+screen_width = info.current_w
+screen_height = info.current_h
+screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
 pygame.display.set_caption("Танки")
 
+# Загрузка изображений
 Tank1_image = pygame.image.load('tank.png').convert_alpha()
 Tank1_image = pygame.transform.scale(Tank1_image, (50, 50))
 Tank2_image = pygame.image.load('tank.png').convert_alpha()
 Tank2_image = pygame.transform.scale(Tank2_image, (50, 50))
 bullet_image = pygame.image.load('bullet.png').convert_alpha()
 bullet_image = pygame.transform.scale(bullet_image, (15, 15))
-
-BORDER_LEFT = 20
-BORDER_RIGHT = 780
-BORDER_TOP = 20
-BORDER_BOTTOM = 580
+wall_image = pygame.image.load('wall.png').convert()
+wall_image = pygame.transform.scale(wall_image, (50, 50))
+background_image = pygame.image.load('fon.jpg.png').convert()
+background_image = pygame.transform.scale(background_image, (screen_width, screen_height))
+fon_2_image = pygame.image.load('fon_2.jpg').convert()
 count = 0
+
 
 class Button:
     def __init__(self, x, y, width, height, text, font_size, text_color):
@@ -26,44 +33,15 @@ class Button:
         self.font_size = font_size
         self.text_color = text_color
 
-    def draw(self, screen):
+    def draw(self, surface):
         font = pygame.font.Font(None, self.font_size)
         text_surface = font.render(self.text, True, self.text_color)
         text_rect = text_surface.get_rect(center=self.rect.center)
-        screen.blit(text_surface, text_rect)
+        surface.blit(text_surface, text_rect)
 
     def is_clicked(self, pos):
         return self.rect.collidepoint(pos)
 
-
-pygame.init()
-screen = pygame.display.set_mode((736, 414))
-pygame.display.set_caption("Моя Игра")
-
-
-background_image = pygame.image.load('fon.jpeg').convert()
-
-
-start_button = Button(10, 30, 200, 25, "Начать игру", 36, (201, 192, 187))
-start_button_2 = Button(10, 75, 200, 25, "Настройки", 36, (201, 192, 187))
-
-
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            exit()
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if start_button.is_clicked(event.pos):
-                running = False
-            if start_button_2.is_clicked(event.pos):
-                pass
-
-
-    screen.blit(background_image, (0, 0))
-    start_button.draw(screen)
-    start_button_2.draw(screen)
-    pygame.display.flip()
 
 class Tank(pygame.sprite.Sprite):
     def __init__(self, image, start_pos, start_angle=0, speed=2):
@@ -75,20 +53,20 @@ class Tank(pygame.sprite.Sprite):
         self.angle = start_angle
         self.speed = speed
         self.bullets = pygame.sprite.Group()
+        self.direction = pygame.math.Vector2(1, 0)
 
     def rotate(self, delta_angle):
         self.angle += delta_angle
         self.image = pygame.transform.rotate(self.original_image, self.angle)
         self.rect = self.image.get_rect(center=self.pos)
+        self.direction = pygame.math.Vector2(1, 0).rotate(-self.angle)
 
     def move_forward(self):
-        move_direction = pygame.math.Vector2(1, 0).rotate(-self.angle)
-        self.pos += move_direction * self.speed
+        self.pos += self.direction * self.speed
         self.rect.center = self.pos
 
     def move_backward(self):
-        move_direction = -pygame.math.Vector2(1, 0).rotate(-self.angle)
-        self.pos += move_direction * self.speed
+        self.pos -= self.direction * self.speed
         self.rect.center = self.pos
 
     def shoot(self):
@@ -100,6 +78,14 @@ class Tank(pygame.sprite.Sprite):
     def update_bullets(self, surface):
         self.bullets.update()
         self.bullets.draw(surface)
+
+
+class MapSprite(pygame.sprite.Sprite):
+    def __init__(self, image, x, y):
+        super().__init__()
+        self.image = image
+        self.rect = self.image.get_rect(topleft=(x, y))
+
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, position, angle, speed=10):
@@ -118,84 +104,152 @@ class Bullet(pygame.sprite.Sprite):
         if not screen.get_rect().contains(self.rect):
             self.kill()
 
+
+# Создание танков
 Tank1 = Tank(Tank1_image, (200, 300))
 Tank2 = Tank(Tank2_image, (500, 300))
 
+# Создание спрайтов карты
+map_sprites = pygame.sprite.Group()
+tile_size = 50
+BORDER_LEFT = tile_size
+BORDER_RIGHT = screen_width - tile_size
+BORDER_TOP = tile_size
+BORDER_BOTTOM = screen_height - tile_size
+
+for x in range(tile_size, screen_width - tile_size, tile_size):
+    map_sprites.add(MapSprite(wall_image, x, tile_size))
+    map_sprites.add(MapSprite(wall_image, x, screen_height - tile_size -tile_size))
+for y in range(tile_size, screen_height - tile_size, tile_size):
+    map_sprites.add(MapSprite(wall_image, tile_size, y))
+    map_sprites.add(MapSprite(wall_image, screen_width - tile_size - tile_size, y))
+
+map_sprites.add(MapSprite(wall_image, 100, 250))
+map_sprites.add(MapSprite(wall_image, screen_width - 150, 250))
+map_sprites.add(MapSprite(wall_image, 100, 400))
+map_sprites.add(MapSprite(wall_image, screen_width - 150, 400))
+# Создание кнопок
+start_button = Button(screen_width // 2 - 100, screen_height // 2 - 50, 200, 50, "Начать игру", 36, (255, 255, 255))
+start_button_2 = Button(screen_width // 2 - 100, screen_height // 2 + 50, 200, 50, "Настройки", 36, (255, 255, 255))
+
+# Стартовый экран
+start_screen = True
+while start_screen:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            exit()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if start_button.is_clicked(event.pos):
+                start_screen = False
+            if start_button_2.is_clicked(event.pos):
+                pass
+
+    alpha_surface = pygame.Surface((400,200), pygame.SRCALPHA)
+    alpha_surface.fill((0, 0, 0, 0))
+    pygame.draw.rect(alpha_surface, (0, 0, 0, 128), alpha_surface.get_rect())
+
+    screen.blit(background_image, (0, 0))
+    screen.blit(alpha_surface, (screen_width // 2 - 200, screen_height // 2 - 100))
+    start_button.draw(screen)
+    start_button_2.draw(screen)
+    pygame.display.flip()
+
+# Основная игра
 clock = pygame.time.Clock()
 running = True
+winner = None #Переменная для отслеживания победителя
 while running:
     pygame.event.pump()
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+            exit()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_e:
+            if event.key == pygame.K_SPACE:
                 Tank1.shoot()
-            if event.key == pygame.K_RCTRL:
+            if event.key == pygame.K_KP_ENTER:
                 Tank2.shoot()
+        if winner:
+             if event.type == pygame.MOUSEBUTTONDOWN:
+                if exit_button.is_clicked(event.pos):
+                    running = False
+                    exit()
+    if not winner: #если никто не выиграл то продолжаем игру
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_a]:
+            Tank1.rotate(3)
+        if keys[pygame.K_d]:
+            Tank1.rotate(-3)
+        if keys[pygame.K_w]:
+            Tank1.move_forward()
+        if keys[pygame.K_s]:
+            Tank1.move_backward()
 
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_a]:
-        Tank1.rotate(3)
-    if keys[pygame.K_d]:
-        Tank1.rotate(-3)
-    if keys[pygame.K_w]:
-        Tank1.move_forward()
-    if keys[pygame.K_s]:
-        Tank1.move_backward()
+        if keys[pygame.K_LEFT]:
+            Tank2.rotate(3)
+        if keys[pygame.K_RIGHT]:
+            Tank2.rotate(-3)
+        if keys[pygame.K_UP]:
+            Tank2.move_forward()
+        if keys[pygame.K_DOWN]:
+            Tank2.move_backward()
+        if not (BORDER_LEFT < Tank1.pos.x < BORDER_RIGHT and BORDER_TOP < Tank1.pos.y < BORDER_BOTTOM):
+            Tank1.pos -= Tank1.direction * Tank1.speed
+        if not (BORDER_LEFT < Tank2.pos.x < BORDER_RIGHT and BORDER_TOP < Tank2.pos.y < BORDER_BOTTOM):
+            Tank2.pos -= Tank2.direction * Tank2.speed
 
-    if keys[pygame.K_LEFT]:
-        Tank2.rotate(3)
-    if keys[pygame.K_RIGHT]:
-        Tank2.rotate(-3)
-    if keys[pygame.K_UP]:
-        Tank2.move_forward()
-    if keys[pygame.K_DOWN]:
-        Tank2.move_backward()
+        collided_tank1 = pygame.sprite.spritecollide(Tank1, map_sprites, False)
+        collided_tank2 = pygame.sprite.spritecollide(Tank2, map_sprites, False)
 
-    if not (BORDER_LEFT < Tank1.pos.x < BORDER_RIGHT and BORDER_TOP < Tank1.pos.y < BORDER_BOTTOM):
-        Tank1.pos -= Tank1.direction * Tank1.speed
-    if not (BORDER_LEFT < Tank2.pos.x < BORDER_RIGHT and BORDER_TOP < Tank2.pos.y < BORDER_BOTTOM):
-        Tank2.pos -= Tank2.direction * Tank1.speed
+        if collided_tank1:
+          Tank1.pos -= Tank1.direction * Tank1.speed
 
-    Hit_tan1 = pygame.sprite.spritecollide(Tank1, Tank2.bullets, True)
-    Hit_tank2 = pygame.sprite.spritecollide(Tank2, Tank1.bullets, True)
+        if collided_tank2:
+          Tank2.pos -= Tank2.direction * Tank2.speed
+        #проверка попаданий
+        Hit_tan1 = pygame.sprite.spritecollide(Tank1, Tank2.bullets, True)
+        Hit_tank2 = pygame.sprite.spritecollide(Tank2, Tank1.bullets, True)
 
-    if Hit_tan1:
-        count +=1
-        print("Попали в первый танк!")
-        if count == 5:
-            font = pygame.font.Font(None, 52)
-            text = font.render("Победил второй танк!", True, (255, 255, 255))
-            text_rect = text.get_rect(center=(400, 300))
-            screen.blit(text, text_rect)
-            pygame.display.flip()
-            pygame.time.delay(2000)  # Пауза перед завершением игры
-            running = False
-    if Hit_tank2:
-        print("Попали во второй танк!")
-        count += 1
+        if Hit_tan1:
+            count +=1
+            print("Попали в первый танк!")
+            if count == 5:
+                winner = "второй"
+                font = pygame.font.Font(None, 52)
+                text = font.render("Победил второй танк!", True, (0, 0, 0))
+                text_rect = text.get_rect(center=(screen_width/2, screen_height/2))
+                exit_button = Button(screen_width // 2 - 100, screen_height // 2 + 50, 200, 50, "Выход", 36, (255, 255, 255)) #создаем кнопку выхода
+                winner_text = text
+                winner_text_rect = text_rect
+                print("Победил второй танк")
+                screen.blit(fon_2_image, (0, 0))
+        if Hit_tank2:
+            print("Попали во второй танк!")
+            count += 1
+            if count == 5:
+                winner = "первый"
+                font = pygame.font.Font(None, 52)
+                text = font.render("Победил первый танк!", True, (0, 0, 0))
+                text_rect = text.get_rect(center=(screen_width / 2, screen_height / 2))
+                exit_button = Button(screen_width // 2 - 100, screen_height // 2 + 50, 200, 50, "Выход", 36, (255, 255, 255))
+                winner_text = text
+                winner_text_rect = text_rect
+                print("Победил первый танк")
+                screen.blit(fon_2_image, (0, 0))
+    if winner:
+      screen.blit(fon_2_image, (0, 0))
+      screen.blit(winner_text, winner_text_rect)
+      exit_button.draw(screen)
 
-        if count == 5:
-            font = pygame.font.Font(None, 52)
-            text = font.render("Победил первый танк!", True, (255, 255, 255))
-            text_rect = text.get_rect(center=(400, 300))
-            screen.blit(text, text_rect)
-            pygame.display.flip()
-            pygame.time.delay(2000)  # Пауза перед завершением игры
-            running = False
 
     screen.fill((30, 30, 30))
-
+    map_sprites.draw(screen)
     Tank1.draw(screen)
     Tank2.draw(screen)
-
     Tank1.update_bullets(screen)
     Tank2.update_bullets(screen)
 
     pygame.display.flip()
-
     clock.tick(60)
 
 pygame.quit()
