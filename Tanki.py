@@ -1,24 +1,26 @@
 import pygame
 import sys
 
-
 pygame.init()
 
-
 screen = pygame.display.set_mode((800, 600))
-pygame.display.set_caption("Машины")
+pygame.display.set_caption("Танки")
 
-
-car1_image = pygame.image.load('tank.png').convert_alpha()
-car1_image = pygame.transform.scale(car1_image, (50, 50))
-car2_image = pygame.image.load('tank.png').convert_alpha()
-car2_image = pygame.transform.scale(car2_image, (50, 50))
+Tank1_image = pygame.image.load('tank.png').convert_alpha()
+Tank1_image = pygame.transform.scale(Tank1_image, (50, 50))
+Tank2_image = pygame.image.load('tank.png').convert_alpha()
+Tank2_image = pygame.transform.scale(Tank2_image, (50, 50))
 bullet_image = pygame.image.load('bullet.png').convert_alpha()
 bullet_image = pygame.transform.scale(bullet_image, (15, 15))
 
+BORDER_LEFT = 20
+BORDER_RIGHT = 780
+BORDER_TOP = 20
+BORDER_BOTTOM = 580
 
-class Car:
+class Tank(pygame.sprite.Sprite):
     def __init__(self, image, start_pos, start_angle=0, speed=2):
+        super().__init__()
         self.image = image
         self.original_image = image
         self.rect = self.image.get_rect(center=start_pos)
@@ -48,10 +50,9 @@ class Car:
     def draw(self, surface):
         surface.blit(self.image, self.rect)
 
-    def update_bullets(self):
+    def update_bullets(self, surface):
         self.bullets.update()
-        self.bullets.draw(screen)
-
+        self.bullets.draw(surface)
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, position, angle, speed=10):
@@ -67,70 +68,65 @@ class Bullet(pygame.sprite.Sprite):
         self.position += self.direction * self.speed
         self.rect.center = self.position
 
-        # Удаляем снаряд, если он выходит за пределы экрана
         if not screen.get_rect().contains(self.rect):
             self.kill()
 
-
-
-car1 = Car(car1_image, (200, 300))
-car2 = Car(car2_image, (500, 300))
-
-
-border_left = 20
-border_right = 780
-border_top = 20
-border_bottom = 580
-
+Tank1 = Tank(Tank1_image, (200, 300))
+Tank2 = Tank(Tank2_image, (500, 300))
 
 clock = pygame.time.Clock()
 running = True
 while running:
     pygame.event.pump()
 
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_e:
-                car1.shoot()
+                Tank1.shoot()
             if event.key == pygame.K_RCTRL:
-                car2.shoot()
-
+                Tank2.shoot()
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
-        car1.rotate(3)
+        Tank1.rotate(3)
     if keys[pygame.K_d]:
-        car1.rotate(-3)
+        Tank1.rotate(-3)
     if keys[pygame.K_w]:
-        car1.move_forward()
+        Tank1.move_forward()
     if keys[pygame.K_s]:
-        car1.move_backward()
+        Tank1.move_backward()
 
     if keys[pygame.K_LEFT]:
-        car2.rotate(3)
+        Tank2.rotate(3)
     if keys[pygame.K_RIGHT]:
-        car2.rotate(-3)
+        Tank2.rotate(-3)
     if keys[pygame.K_UP]:
-        car2.move_forward()
+        Tank2.move_forward()
     if keys[pygame.K_DOWN]:
-        car2.move_backward()
+        Tank2.move_backward()
 
+    if not (BORDER_LEFT < Tank1.pos.x < BORDER_RIGHT and BORDER_TOP < Tank1.pos.y < BORDER_BOTTOM):
+        Tank1.pos -= Tank1.direction * Tank1.speed
+    if not (BORDER_LEFT < Tank2.pos.x < BORDER_RIGHT and BORDER_TOP < Tank2.pos.y < BORDER_BOTTOM):
+        Tank2.pos -= Tank2.direction * Tank1.speed
 
-    if not (border_left < car1.pos.x < border_right and border_top < car1.pos.y < border_bottom):
-        car1.pos -= car1.direction * car1.speed
-    if not (border_left < car2.pos.x < border_right and border_top < car2.pos.y < border_bottom):
-        car2.pos -= car2.direction * car2.speed
+    Hit_tan1 = pygame.sprite.spritecollide(Tank1, Tank2.bullets, True)
+    Hit_tank2 = pygame.sprite.spritecollide(Tank2, Tank1.bullets, True)
+
+    if Hit_tan1:
+        print("Попали в первый танк!")
+    if Hit_tank2:
+        print("Попали во второй танк!")
 
     screen.fill((30, 30, 30))
 
-    car1.draw(screen)
-    car2.draw(screen)
+    Tank1.draw(screen)
+    Tank2.draw(screen)
 
-    car1.update_bullets()
-    car2.update_bullets()
+    Tank1.update_bullets(screen)
+    Tank2.update_bullets(screen)
 
     pygame.display.flip()
 
