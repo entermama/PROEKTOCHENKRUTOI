@@ -214,20 +214,62 @@ while running:
         count_of_hit_1 +=1
         HP_1 -= 20
         if count_of_hit_1 == 5:
-            background_image = pygame.image.load('fon_2.png').convert()
-            scaled_image = pygame.transform.scale(background_image, (1920, 1080))
-            screen.blit(scaled_image, (0, 0))
-            font = pygame.font.Font(None, 52)
-            text = font.render(f"Победил второй танк! Количество выстрелов первого танка: {count_of_shooting_1}, "
-                               f"Количество выстрелов второго танка: {count_of_shooting_2}",
-                               True, (255, 255, 255))
-            text_rect = text.get_rect(topleft=(50, 50))
-            screen.blit(text, text_rect)
-            pygame.display.flip()
-            pygame.time.delay(5000)
-            if event.type == pygame.QUIT:
-                exit()
-            running = False
+            exit_screen = True
+            while exit_screen:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        exit()
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if exit_button_2.is_clicked(event.pos):
+                            exit()
+                screen.blit(background_image, (0, 0))
+                background_image = pygame.image.load('fon_2.png').convert()
+                scaled_image = pygame.transform.scale(background_image, (1920, 1080))
+                screen.blit(scaled_image, (0, 0))
+                font = pygame.font.Font(None, 52)
+                font_pobeda = pygame.font.Font(None, 80)
+                font_name = pygame.font.Font(None, 70)
+
+                text_res = font.render(f"Результаты:", True, (255, 255, 255))
+
+                text_pobeda = font_pobeda.render(f"Победил второй танк!!!", True, (255, 255, 255))
+
+                text_name_1 = font_name.render(f"Первый танк:", True, (255, 255, 255))
+                text_name_2 = font_name.render(f"Второй танк:", True, (255, 255, 255))
+
+                text_shoot_1 = font.render(f" Количество выстрелов: {count_of_shooting_1}", True, (255, 255, 255))
+                text_shoot_2 = font.render(f"Количество выстрелов: {count_of_shooting_2}", True, (255, 255, 255))
+
+                text_hit_1 = font.render(f"Количество попаданий: {count_of_hit_2}", True, (255, 255, 255))
+                text_hit_2 = font.render(f"Количество попаданий: {count_of_hit_1}", True, (255, 255, 255))
+
+                text_hp_1 = font.render(f"Количество ХП: {HP_1}", True, (255, 255, 255))
+                text_hp_2 = font.render(f"Количество ХП: {HP_2}", True, (255, 255, 255))
+
+                text_rect_res = text_res.get_rect(topleft=(50, 50))
+                text_rect_pobeda = text_res.get_rect(center=(715, 50))
+                text_rect_name_1 = text_name_1.get_rect(topleft=(300, 145))
+                text_rect_name_2 = text_name_1.get_rect(topright=(1620, 150))
+                text_rect_shoot_1 = text_shoot_1.get_rect(topleft=(200, 230))
+                text_rect_shoot_2 = text_shoot_2.get_rect(topright=(1650, 230))
+                text_rect_hit_1 = text_hit_2.get_rect(topleft=(200, 310))
+                text_rect_hit_2 = text_hit_2.get_rect(topright=(1650, 310))
+                text_rect_hp_1 = text_hp_1.get_rect(topleft=(210, 390))
+                text_rect_hp_2 = text_hp_2.get_rect(topright=(1512, 390))
+
+                screen.blit(text_res, text_rect_res)
+                screen.blit(text_pobeda, text_rect_pobeda)
+                screen.blit(text_name_1, text_rect_name_1)
+                screen.blit(text_name_2, text_rect_name_2)
+                screen.blit(text_shoot_1, text_rect_shoot_1)
+                screen.blit(text_shoot_2, text_rect_shoot_2)
+                screen.blit(text_hit_1, text_rect_hit_1)
+                screen.blit(text_hit_2, text_rect_hit_2)
+                screen.blit(text_hp_1, text_rect_hp_1)
+                screen.blit(text_hp_2, text_rect_hp_2)
+
+                exit_button_2.draw(screen)
+                pygame.display.flip()
     if Hit_tank2:
         HP_2 -= 20
         count_of_hit_2 += 1
