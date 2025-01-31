@@ -1,25 +1,41 @@
 import pygame
 import sys
+import math
 
 pygame.init()
 
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Танки")
 
-Tank1_image = pygame.image.load('tank.png').convert_alpha()
-Tank1_image = pygame.transform.scale(Tank1_image, (50, 50))
-Tank2_image = pygame.image.load('tank.png').convert_alpha()
-Tank2_image = pygame.transform.scale(Tank2_image, (50, 50))
-bullet_image = pygame.image.load('bullet.png').convert_alpha()
-bullet_image = pygame.transform.scale(bullet_image, (15, 15))
+TANK_IMAGE = pygame.image.load('tank.png').convert_alpha()
+TANK_IMAGE = pygame.transform.scale(TANK_IMAGE, (50, 50))
+BULLET_IMAGE = pygame.image.load('bullet.png').convert_alpha()
+BULLET_IMAGE = pygame.transform.scale(BULLET_IMAGE, (15, 15))
+BACKGROUND_IMAGE = pygame.image.load('backgr.png')
+
+RED_HEART_IMAGE = pygame.image.load('redhp.png').convert_alpha()
+BLUE_HEART_IMAGE = pygame.image.load('bluehp.png').convert_alpha()
 
 BORDER_LEFT = 20
 BORDER_RIGHT = 780
 BORDER_TOP = 20
 BORDER_BOTTOM = 580
 
+TILE_WIDTH = BACKGROUND_IMAGE.get_width()
+TILE_HEIGHT = BACKGROUND_IMAGE.get_height()
+
+
+def generate_background(surface, tile_image):
+    width, height = surface.get_size()
+    num_tiles_x = 8
+    num_tiles_y = 8
+    for i in range(num_tiles_x):
+        for j in range(num_tiles_y):
+            surface.blit(tile_image, (i * TILE_WIDTH, j * TILE_HEIGHT))
+
+
 class Tank(pygame.sprite.Sprite):
-    def __init__(self, image, start_pos, start_angle=0, speed=2):
+    def __init__(self, image, start_pos, heart_color, start_angle=0, speed=2):
         super().__init__()
         self.image = image
         self.original_image = image
@@ -28,6 +44,8 @@ class Tank(pygame.sprite.Sprite):
         self.angle = start_angle
         self.speed = speed
         self.bullets = pygame.sprite.Group()
+        self.health = 3
+        self.heart_color = heart_color
 
     def rotate(self, delta_angle):
         self.angle += delta_angle
@@ -54,10 +72,21 @@ class Tank(pygame.sprite.Sprite):
         self.bullets.update()
         self.bullets.draw(surface)
 
+    def draw_health_bar(self, surface):
+        heart_x = self.rect.left - 40
+        heart_y = self.rect.bottom + 5
+        for _ in range(self.health):
+            if self.heart_color == 'red':
+                surface.blit(RED_HEART_IMAGE, (heart_x, heart_y))
+            elif self.heart_color == 'blue':
+                surface.blit(BLUE_HEART_IMAGE, (heart_x, heart_y))
+            heart_x += RED_HEART_IMAGE.get_width() + 5
+
+
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, position, angle, speed=10):
         super().__init__()
-        self.image = bullet_image
+        self.image = BULLET_IMAGE
         self.rect = self.image.get_rect(center=position)
         self.angle = angle
         self.speed = speed
@@ -71,8 +100,9 @@ class Bullet(pygame.sprite.Sprite):
         if not screen.get_rect().contains(self.rect):
             self.kill()
 
-Tank1 = Tank(Tank1_image, (200, 300))
-Tank2 = Tank(Tank2_image, (500, 300))
+
+Tank1 = Tank(TANK_IMAGE, (200, 300), heart_color='red')
+Tank2 = Tank(TANK_IMAGE, (500, 300), heart_color='blue')
 
 clock = pygame.time.Clock()
 running = True
@@ -83,9 +113,9 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_e:
+            if event.key == pygame.K_SPACE:
                 Tank1.shoot()
-            if event.key == pygame.K_RCTRL:
+            if event.key == pygame.K_RETURN:
                 Tank2.shoot()
 
     keys = pygame.key.get_pressed()
@@ -116,17 +146,32 @@ while running:
     Hit_tank2 = pygame.sprite.spritecollide(Tank2, Tank1.bullets, True)
 
     if Hit_tan1:
-        print("Попали в первый танк!")
+        Tank1.health -= 1
+        print(f"Попали в первый танк! Здоровье: {Tank1.health}")
     if Hit_tank2:
-        print("Попали во второй танк!")
+        Tank2.health -= 1
+        print(f"Попали во второй танк! Здоровье: {Tank2.health}")
 
-    screen.fill((30, 30, 30))
+    if Tank1.rect.colliderect(Tank2.rect):
+        collision_normal = pygame.math.Vector2(Tank1.pos - Tank2.pos)
+        collision_angle = math.atan2(collision_normal.y, collision_normal.x)
+
+        Tank1.move_backward()
+        Tank2.move_backward()
+
+        Tank1.angle = (Tank1.angle + collision_angle) % 360
+        Tank2.angle = (Tank2.angle - collision_angle) % 360
+
+    generate_background(screen, BACKGROUND_IMAGE)
 
     Tank1.draw(screen)
     Tank2.draw(screen)
 
     Tank1.update_bullets(screen)
     Tank2.update_bullets(screen)
+
+    Tank1.draw_health_bar(screen)
+    Tank2.draw_health_bar(screen)
 
     pygame.display.flip()
 
